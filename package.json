@@ -1,0 +1,41 @@
+{
+  "name": "codecorn-userscripts",
+  "version": "1.0.0",
+  "description": "A collection of advanced Tampermonkey userscripts crafted for debugging, automation, and UI manipulation",
+  "main": "index.js",
+  "scripts": {
+    "test": "prettier --check \"**/*.js\"",
+    "dev": "serve . -p 8765 --cors -l tcp://localhost",
+    "format": "prettier --write \"**/*.js\"",
+    "build:godmode": "terser god-mode-console/CodeCorn_GodMode.user.js -o god-mode-console/dist/CodeCorn_GodMode.min.user.js --compress --mangle --comments \"/^!/\"",
+    "clean:prev": "find . -type d -name '_PREV' -exec rm -rf {} +",
+    "new:script": "bash -c 'mkdir -p \"$0\" && cp template/jsconfig.json \"$0/\" && touch \"$0/$0.user.js\"' "
+  },
+  "author": "Federico Girolami",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/CodeCornTech/codecorn-userscripts.git"
+  },
+  "keywords": [
+    "tampermonkey",
+    "userscript",
+    "greasemonkey",
+    "devtools",
+    "debugging",
+    "dom-manipulation",
+    "frontend-development",
+    "automation",
+    "javascript",
+    "codecorn"
+  ],
+  "bugs": {
+    "url": "https://github.com/CodeCornTech/codecorn-userscripts/issues"
+  },
+  "homepage": "https://github.com/CodeCornTech/codecorn-userscripts#readme",
+  "devDependencies": {
+    "prettier": "^3.8.4",
+    "serve": "^14.2.6",
+    "terser": "^5.48.0"
+  }
+}
