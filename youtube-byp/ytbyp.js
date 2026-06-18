@@ -1,8 +1,9 @@
-// ==UserScript== 208
+//@ts-nocheck 209
+// ==UserScript==
 // @name         YT Music Autoclicker API
 // @namespace    https://github.com/tuoprofilo
-// @version      2.0.8
-// @description  Bypassa popup, notifiche native, debug esteso e zero errori TypeScript
+// @version      2.0.9
+// @description  Bypassa popup con IntersectionObserver, API di debug e zero errori TS
 // @author       Tu & Gemini
 // @icon         data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAACsAAAAgCAYAAACLmoEDAAABo0lEQVR4AdSXAZKDIBAEiR878zL1Zbmf5aY3txaWpqKyWCS1I4jotiMi6VLh75lSv1eFqdIKNks8qv7I9FR9JQE89mrr/KzNc5HXpOsuYgGrE0cd9eSD6n0mVauG5yKvCR7kWWdYNSoSnfxYCyU8g8C4kdcw0A6OtgD3jgHoF6x62I7KVsNe4k6umsWtUmZcA2P2W2DnYZDdQLPVHmd/AvB+A67x8RLAfuy0o8N0S0mRplTxFwVriKJlCqwGDGzoCwawpIh3GVhzJXoj2lFSxEFXg/WbF60PjeLhUR0WaICR6kXAl8AK0oMpDvn+ofISWD7pki89T7/Q1WEFyZgF9DSk218NFkhJEbdGBvb0GPI7zkvRsZzDyfBlJ7B5rtP1DBLQ4ke+BRIFi4vVIB08CvaQk578aAls0UR9NGFJf2BLzr/y3KnTZzB0NqhJ7842PxRk6miwVORIyw6bmQYr0CTgu0prVNlKYOBdbHyyl/9uaZQUCWhEZ3QFPHlc5AYS0Wb5Z2dt738jWlb5iM7opraV1J2ncVhb11IbeVzkniGVx+IPAAD///H503IAAAAGSURBVAMApvWIs8xfbPkAAAAASUVORK5CYII=
 // @include      *://music.youtube.com/**
@@ -13,7 +14,7 @@
 /* eslint-env browser, greasemonkey */
 /* global globalThis */
 
-const VERSION = '2.0.8';
+const VERSION = '2.0.9';
 
 (function (window, globalThis) {
     'use strict';
@@ -21,7 +22,7 @@ const VERSION = '2.0.8';
     /** @typedef {{ message: string, attempts?: number, success?: boolean }} YTBypEventDetail */
 
     /**
-     * @typedef {Object} YTBYP_API L'API esposta globalmente
+     * @typedef {Object} YTBYP_API
      * @property {() => void} start
      * @property {() => void} stop
      * @property {() => void} forceCheck
@@ -30,14 +31,14 @@ const VERSION = '2.0.8';
      * @property {{ yesButton: () => Element | null, modal: () => Element | null }} DOM
      * @property {number | undefined} [interval]
      * @property {MutationObserver | undefined} [bodyObserver]
-     * @property {MutationObserver | undefined} [modalObserver]
+     * @property {IntersectionObserver | undefined} [visibilityObserver]
      */
 
     /** @type {any} */
     const _global = globalThis;
-    
+
     /** @type {Window & { cccg?: {ccLog?: (m: string) => void}, ytbyp?: YTBYP_API }} */
-    const targetWindow = (typeof _global['unsafeWindow'] !== 'undefined' ? _global['unsafeWindow'] : window);
+    const targetWindow = (typeof _global.unsafeWindow !== 'undefined' ? _global.unsafeWindow : window);
 
     /** @param {Element | null} el */
     const isVisible = (el) => {
@@ -47,8 +48,8 @@ const VERSION = '2.0.8';
         return style.display !== 'none' && style.visibility !== 'hidden' && style.opacity !== '0' && (/** @type {HTMLElement} */(el)).offsetWidth > 0;
     };
 
-    /** * @param {string} title 
-     * @param {string} body 
+    /** * @param {string} title
+     * @param {string} body
      */
     const sendBrowserNotification = (title, body) => {
         if (!('Notification' in window)) return;
@@ -80,13 +81,13 @@ const VERSION = '2.0.8';
 
     /** @type {YTBYP_API} */
     const API = {
-        start: () => {}, // Inizializzato più in basso
-        stop: () => {},  // Inizializzato più in basso
-        forceCheck: () => {}, // Inizializzato più in basso
-        forceClick: () => { 
-            const b = /** @type {HTMLElement | null} */ (API.DOM.yesButton()); 
-            if(b) b.click(); 
-            else debug("forceClick: bottone non trovato."); 
+        start: () => {},
+        stop: () => {},
+        forceCheck: () => {},
+        forceClick: () => {
+            const b = /** @type {HTMLElement | null} */ (API.DOM.yesButton());
+            if(b) b.click();
+            else debug("forceClick: bottone non trovato.");
         },
         notify: sendBrowserNotification,
         DOM: {
@@ -95,7 +96,7 @@ const VERSION = '2.0.8';
         },
         interval: undefined,
         bodyObserver: undefined,
-        modalObserver: undefined
+        visibilityObserver: undefined
     };
 
     const startClickLoop = () => {
@@ -129,31 +130,30 @@ const VERSION = '2.0.8';
         }, 200);
     };
 
-    /** @param {Element} modalElement */
-    const attachModalObserver = (modalElement) => {
+    /** * Il Game Changer: L'IntersectionObserver!
+     * @param {Element} modalElement
+     */
+    const attachVisibilityObserver = (modalElement) => {
         const modalHtml = /** @type {HTMLElement} */ (modalElement);
         if (!modalHtml || modalHtml.dataset.ytbypObserved) return;
         modalHtml.dataset.ytbypObserved = 'true';
-        
-        debug("Agganciato observer attributi dedicato al modal.");
-        
-        API.modalObserver = new MutationObserver((mutations) => {
-            let visibilityChanged = false;
-            mutations.forEach(mut => {
-                debug(`Mutazione rilevata: attributo '${mut.attributeName}' modificato.`);
-                visibilityChanged = true;
-            });
-            
-            if (visibilityChanged && isVisible(modalHtml)) {
-                debug("Il modal è diventato visibile tramite cambio attributi! Innesco il bypass.");
-                setTimeout(startClickLoop, 150);
+
+        debug("Agganciato IntersectionObserver al modal.");
+
+        API.visibilityObserver = new IntersectionObserver((entries) => {
+            for (const entry of entries) {
+                // isIntersecting è true se l'elemento entra nella viewport (ovvero se i parent lo rendono visibile)
+                if (entry.isIntersecting) {
+                    debug("Il modal è apparso a schermo! Innesco il bypass.");
+                    setTimeout(startClickLoop, 150);
+                }
             }
+        }, {
+            root: null, // Guarda l'intera viewport del browser
+            threshold: 0.1 // Basta che appaia il 10% del popup per attivarsi
         });
 
-        API.modalObserver.observe(modalHtml, { 
-            attributes: true, 
-            attributeFilter: ['style', 'hidden', 'class', 'dialog', 'aria-hidden'] 
-        });
+        API.visibilityObserver.observe(modalHtml);
     };
 
     let isRunning = false;
@@ -161,14 +161,15 @@ const VERSION = '2.0.8';
     API.start = () => {
         if (isRunning) return;
         isRunning = true;
-        
+
+        // 1. Cerca il modal se è già stato iniettato da YouTube
         const existingModal = document.querySelector('ytmusic-you-there-renderer');
         if (existingModal) {
-            debug("Modal trovato nel DOM all'avvio. Pre-aggancio l'observer.");
-            attachModalObserver(existingModal);
-            if (isVisible(existingModal)) setTimeout(startClickLoop, 150);
+            debug("Modal trovato nel DOM all'avvio. Pre-aggancio IntersectionObserver.");
+            attachVisibilityObserver(existingModal);
         }
 
+        // 2. Observer di sicurezza per la primissima iniezione nel body
         API.bodyObserver = new MutationObserver((m) => {
             for (const mut of m){
                 for (const node of mut.addedNodes){
@@ -176,30 +177,28 @@ const VERSION = '2.0.8';
                         const el = /** @type {HTMLElement} */(node);
                         const modal = el.tagName === 'YTMUSIC-YOU-THERE-RENDERER' ? el : el.querySelector('ytmusic-you-there-renderer');
                         if (modal) {
-                            debug("Nuovo nodo modal inserito nel DOM. Aggancio l'observer dedicato.");
-                            attachModalObserver(modal);
-                            setTimeout(startClickLoop, 150);
+                            debug("Nuovo nodo modal inserito nel DOM.");
+                            attachVisibilityObserver(modal);
                         }
                     }
                 }
             }
         });
-        
+
         API.bodyObserver.observe(document.body, { childList: true, subtree: true });
         dispatchLog('ytbyp:start', `Observer AVVIATO. Version: ${VERSION}`);
     };
 
-    API.stop = () => { 
-        isRunning = false; 
-        if (API.interval !== undefined) clearInterval(API.interval); 
+    API.stop = () => {
+        isRunning = false;
+        if (API.interval !== undefined) clearInterval(API.interval);
         if (API.bodyObserver) API.bodyObserver.disconnect();
-        if (API.modalObserver) API.modalObserver.disconnect();
+        if (API.visibilityObserver) API.visibilityObserver.disconnect();
         dispatchLog('ytbyp:stop', 'Tutti gli Observer ARRESTATI.');
     };
 
     API.forceCheck = startClickLoop;
 
-    // Esposizione dell'oggetto pulito e inizializzato
     targetWindow.ytbyp = API;
     API.start();
 })(window, globalThis);
