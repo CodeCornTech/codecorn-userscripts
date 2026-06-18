@@ -77,7 +77,23 @@ const _unsafeWindow = typeof unsafeWindow !== 'undefined' ? unsafeWindow : null;
     let isRunning = false;
 
     // --- UTILITIES ---
-
+    /**
+     * Verifica se un elemento esiste nel DOM ed è effettivamente visibile a schermo
+     * @param {Element | null} el L'elemento da controllare
+     * @returns {boolean}
+     */
+    const isVisible = (el) => {
+        if (!el) return false;
+        if (el.hasAttribute('hidden')) return false;
+        
+        // Controlla che non sia nascosto via CSS
+        const style = window.getComputedStyle(el);
+        return style.display !== 'none' && 
+               style.visibility !== 'hidden' && 
+               style.opacity !== '0' && 
+               /** @type {HTMLElement} */ (el).offsetWidth > 0;
+    };
+    
     /**
      * Invia una notifica nativa del browser (richiede permessi)
      * @param {string} title Titolo della notifica
@@ -130,7 +146,6 @@ const _unsafeWindow = typeof unsafeWindow !== 'undefined' ? unsafeWindow : null;
     };
 
     // --- LOGICA CORE ---
-
     /**
      * Gestisce il loop di tentativi per il click
      */
@@ -144,36 +159,40 @@ const _unsafeWindow = typeof unsafeWindow !== 'undefined' ? unsafeWindow : null;
             try {
                 const modal = document.querySelector('ytmusic-you-there-renderer');
                 
+                // IL SEGRETO È QUI: Ora controlliamo se è visibile, non solo se esiste!
+                if (!isVisible(modal)) {
+                    clearInterval(clickInterval);
+                    dispatchLog('ytbyp:modal-closed', `Modal scomparso o invisibile. Loop terminato.`, { attempts, success: true });
+                    return;
+                }
+
                 const yesButton = document.querySelector('yt-button-renderer[dialog-confirm] button') || 
                                   document.querySelector('ytmusic-you-there-renderer button.ytSpecButtonShapeNextHost') ||
                                   document.querySelector('ytmusic-you-there-renderer button');
 
-                if (!modal) {
-                    clearInterval(clickInterval);
-                    dispatchLog('ytbyp:modal-closed', `Modal scomparso. Loop terminato.`, { attempts, success: true });
-                    return;
-                }
-
                 if (yesButton) {
-                    // 1. Clicchiamo il bottone con un evento base (senza "view: window" che fa crashare Tampermonkey)
-                    const clickEvent = new Event('click', { bubbles: true, cancelable: true });
-                    yesButton.dispatchEvent(clickEvent);
-                    /** @type {HTMLElement} */ (yesButton).click(); // Fallback
+                    const btn = /** @type {HTMLElement} */ (yesButton);
                     
-                    // 2. L'ARMA SEGRETA PER I TAB IN BACKGROUND:
-                    // Forziamo direttamente il tag <video> a ripartire, ignorando le restrizioni di focus di YouTube.
+                    // Simuliamo l'intero ciclo di interazione (Mousedown -> Mouseup -> Click) 
+                    // per ingannare il sistema di gesture di Polymer
+                    const events = ['pointerdown', 'mousedown', 'pointerup', 'mouseup', 'click'];
+                    events.forEach(eventType => {
+                        btn.dispatchEvent(new MouseEvent(eventType, { bubbles: true, cancelable: true }));
+                    });
+                    
+                    // Forziamo il riavvio del video nel caso il tab sia in background
                     const videoElements = document.querySelectorAll('video');
                     videoElements.forEach(video => {
                         if (video.paused) {
                             video.play().catch(err => {
-                                dispatchLog('ytbyp:video-play-error', `Il browser ha bloccato l'autoplay: ${err.message}`);
+                                dispatchLog('ytbyp:video-play-error', `Autoplay bloccato: ${err.message}`);
                             });
                         }
                     });
 
-                    dispatchLog('ytbyp:clicked', `Click sparato al bottone e player forzato.`, { attempts: attempts + 1, success: true });
+                    dispatchLog('ytbyp:clicked', `Sequenza di click sparata al bottone.`, { attempts: attempts + 1, success: true });
                 } else {
-                    dispatchLog('ytbyp:button-missing', `Modal presente ma bottone NON trovato!`, { attempts: attempts + 1, success: false });
+                    dispatchLog('ytbyp:button-missing', `Modal visibile ma bottone NON trovato!`, { attempts: attempts + 1, success: false });
                 }
 
                 attempts++;
@@ -186,7 +205,7 @@ const _unsafeWindow = typeof unsafeWindow !== 'undefined' ? unsafeWindow : null;
                 clearInterval(clickInterval);
                 dispatchLog('ytbyp:error', error instanceof Error ? error.message : String(error), { success: false });
             }
-        }, 200); // NB: Se il tab è in background, Chrome potrebbe rallentare questo 200ms a 1000ms automaticamente (è normale)
+        }, 200); 
     };
 
     // --- OBSERVER ---
