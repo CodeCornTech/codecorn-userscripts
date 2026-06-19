@@ -9,7 +9,10 @@
     "format": "prettier --write \"**/*.js\"",
     "build:godmode": "terser god-mode-console/CodeCorn_GodMode.user.js -o god-mode-console/dist/CodeCorn_GodMode.min.user.js --compress --mangle --comments \"/^!/\"",
     "clean:prev": "find . -type d -name '_PREV' -exec rm -rf {} +",
-    "new:script": "bash -c 'mkdir -p \"$0\" && cp template/jsconfig.json \"$0/\" && touch \"$0/$0.user.js\"' "
+    "new:script": "bash -c 'mkdir -p \"$0\" && cp template/jsconfig.json \"$0/\" && touch \"$0/$0.user.js\"' ",
+    "release": "node scripts/release.js",
+    "copy:raw": "cat god-mode-console/CodeCorn_GodMode.user.js | pbcopy && echo '✅ Script RAW copiato nella clipboard!'",
+    "copy:min": "npm run build:godmode && cat god-mode-console/dist/CodeCorn_GodMode.min.user.js | pbcopy && echo '✅ Script MINIFIED buildato e copiato nella clipboard!'"
   },
   "author": "Federico Girolami",
   "license": "MIT",
