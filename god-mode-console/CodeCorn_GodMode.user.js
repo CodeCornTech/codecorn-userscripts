@@ -1,7 +1,7 @@
 // ==UserScript==
-// @name         CodeCorn Console Capture (God Mode v4.14.0)
+// @name         CodeCorn Console Capture (God Mode v4.15.0)
 // @namespace    https://codecorn.it/
-// @version      4.14.0
+// @version      4.15.0
 // @description  Log, Spy, Power Tools, Global Settings & Inspector! Fully Typed, Trusted Types Compliant.
 // @match        *://*/*
 // @run-at       document-start
@@ -1463,7 +1463,7 @@ const _html2canvas = /* @ts-ignore */ typeof html2canvas !== 'undefined' ? html2
         thanos: toggleThanos,
         xray: toggleXRay,
         dump: exportStateDump,
-        version: '4.14.0',
+        version: '4.15.0',
         settings: userSettings,
     };
     // --- 7.5 SELF CHECK VERSIONING E HEALTH ---
@@ -1624,7 +1624,7 @@ const _html2canvas = /* @ts-ignore */ typeof html2canvas !== 'undefined' ? html2
         startAutoHide();
     });
 
-    ccLog('God Mode v4.14.0 Inizializzato! 🚀 (Trusted Types Compliant & WP Customizer Fixed)');
+    ccLog('God Mode v4.15.0 Inizializzato! 🚀 (Trusted Types Compliant & WP Customizer Fixed)');
 })();
 
 /*

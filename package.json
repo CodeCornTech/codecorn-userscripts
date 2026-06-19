@@ -1,6 +1,6 @@
 {
   "name": "codecorn-userscripts",
-  "version": "1.0.0",
+  "version": "4.15.0",
   "description": "A collection of advanced Tampermonkey userscripts crafted for debugging, automation, and UI manipulation",
   "main": "index.js",
   "scripts": {
