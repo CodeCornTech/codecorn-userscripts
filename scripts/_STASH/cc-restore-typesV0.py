@@ -3,28 +3,6 @@ import sys
 import os
 
 
-# --- Colori ANSI per CLI ---
-class C:
-    RESET = "\033[0m"
-    BOLD = "\033[1m"
-    CYAN = "\033[96m"
-    GREEN = "\033[92m"
-    YELLOW = "\033[93m"
-    RED = "\033[91m"
-    MAGENTA = "\033[95m"
-
-
-def print_usage():
-    print(f"\n{C.BOLD}{C.MAGENTA}🌽 CodeCorn Type Restorer{C.RESET}")
-    print(f"Ripristina i commenti e i JSDoc da uno script originale a uno sforbiciato.\n")
-    print(f"{C.BOLD}Uso:{C.RESET}")
-    print(f"  {C.CYAN}python3 cc-restore-types.py{C.RESET} {C.YELLOW}<originale.js> <sforbiciato.js> <output.js>{C.RESET}\n")
-    print(f"{C.BOLD}Opzioni:{C.RESET}")
-    print(f"  {C.GREEN}-h, --help{C.RESET}    Mostra questo messaggio di aiuto ed esce.\n")
-    print(f"{C.BOLD}Esempio:{C.RESET}")
-    print(f"  {C.CYAN}python3 cc-restore-types.py{C.RESET} {C.YELLOW}v1_full.js v2_min.js v2_restored.js{C.RESET}\n")
-
-
 def extract_comments(lines):
     comments_map = {}
     in_block_comment = False
@@ -69,7 +47,7 @@ def extract_comments(lines):
 
 def restore(orig_file, stripped_file, output_file):
     if not os.path.exists(orig_file) or not os.path.exists(stripped_file):
-        print(f"\n{C.BOLD}{C.RED}❌ Errore:{C.RESET} {C.RED}Uno dei file di input non esiste.{C.RESET}\n")
+        print("❌ Errore: Uno dei file di input non esiste.")
         sys.exit(1)
 
     with open(orig_file, "r", encoding="utf-8") as f:
@@ -78,10 +56,10 @@ def restore(orig_file, stripped_file, output_file):
     with open(stripped_file, "r", encoding="utf-8") as f:
         stripped_lines = f.readlines()
 
-    print(f"\n{C.CYAN}[*] Analisi del file originale in corso...{C.RESET}")
+    print(f"[*] Analisi del file originale in corso...")
     comments_map = extract_comments(orig_lines)
     total_blocks = sum(len(v) for v in comments_map.values())
-    print(f"{C.CYAN}[*] Trovati {C.BOLD}{total_blocks}{C.RESET}{C.CYAN} blocchi di commenti/JSDoc mappati ad ancore.{C.RESET}")
+    print(f"[*] Trovati {total_blocks} blocchi di commenti/JSDoc mappati ad ancore.")
 
     output_lines = []
     restored_count = 0
@@ -101,21 +79,15 @@ def restore(orig_file, stripped_file, output_file):
     with open(output_file, "w", encoding="utf-8") as f:
         f.writelines(output_lines)
 
-    print(f"\n{C.GREEN}{C.BOLD}[+] Operazione Completata!{C.RESET}")
-    print(f"{C.GREEN}[+] Ripristinati {C.BOLD}{restored_count}{C.RESET}{C.GREEN} su {C.BOLD}{total_blocks}{C.RESET}{C.GREEN} blocchi di commenti/tipi.{C.RESET}")
-    print(f"{C.GREEN}[+] Nuovo file salvato in: {C.BOLD}{C.YELLOW}{output_file}{C.RESET}\n")
+    print(f"[+] Operazione Completata!")
+    print(f"[+] Ripristinati {restored_count} su {total_blocks} blocchi di commenti/tipi.")
+    print(f"[+] Nuovo file salvato in: {output_file}")
 
 
 if __name__ == "__main__":
-    # Gestione argomenti vuoti o flag di help
-    if len(sys.argv) == 1 or sys.argv[1] in ("-h", "--help"):
-        print_usage()
-        sys.exit(0)
-
-    # Controllo numero argomenti
     if len(sys.argv) != 4:
-        print(f"\n{C.BOLD}{C.RED}❌ Errore:{C.RESET} {C.RED}Numero di argomenti non valido.{C.RESET}")
-        print_usage()
+        print("Uso: python3 cc-restore-types.py <file_vecchio_con_commenti.js> <file_nuovo_tagliato.js> <output_ripristinato.js>")
+        print("Esempio: python3 cc-restore-types.py script_v1.js script_v2.js script_v2_commentato.js")
         sys.exit(1)
 
     restore(sys.argv[1], sys.argv[2], sys.argv[3])
