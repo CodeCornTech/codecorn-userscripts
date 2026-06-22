@@ -1,7 +1,7 @@
 // ==UserScript==
-// @name         CodeCorn Console Capture (God Mode v4.17.0 - Stealth Trap)
+// @name         CodeCorn Console Capture (God Mode v4.17.1 - Stealth Trap & SW Blueprint)
 // @namespace    https://codecorn.it/
-// @version      4.17.0
+// @version      4.17.1
 // @description  Log, Spy, Power Tools, Global Settings & Inspector! Fully Typed, Trusted Types Compliant.
 // @match        *://*/*
 // @run-at       document-start
@@ -151,9 +151,7 @@ const _html2canvas = /* @ts-ignore */ typeof html2canvas !== 'undefined' ? html2
     /** * @param {number} n
      * @returns {string}
      */
-    const pad = (n) => {
-      return String(n.toString().padStart(2, '0'));
-    };
+    const pad = (n) => n.toString().padStart(2, '0');
     const timestamp = `${pad(d.getDate())}/${pad(d.getMonth() + 1)}/${d.getFullYear()} ${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}`;
     originalConsole.info(
       `%c Code %c Corn %c [${timestamp}] ${msg}`,
@@ -432,10 +430,7 @@ const _html2canvas = /* @ts-ignore */ typeof html2canvas !== 'undefined' ? html2
     if (!_html2canvas) return showToast('❌ html2canvas non caricato', true);
     showToast('📸 Screenshot in corso...');
     try {
-      const canvas = await _html2canvas(document.body, {
-        useCORS: true,
-        logging: false,
-      });
+      const canvas = await _html2canvas(document.body, { useCORS: true, logging: false });
       downloadCanvas(canvas, 'screenshot');
     } catch (e) {
       showToast('❌ Errore Screenshot', true);
@@ -448,7 +443,6 @@ const _html2canvas = /* @ts-ignore */ typeof html2canvas !== 'undefined' ? html2
   /** @type {HTMLElement|null} */ let tooltip = null;
   /** @type {HTMLElement|null} */ let hoveredEl = null;
 
-  // --- Nuove Variabili per Inspector Multi-Select ---
   /** @type {HTMLElement[]} */
   let selectedNodes = [];
   /** @type {HTMLElement|null} */
@@ -506,7 +500,7 @@ const _html2canvas = /* @ts-ignore */ typeof html2canvas !== 'undefined' ? html2
   }
 
   /**
-   * Helper: Trova l'antenato comune più basso (LCA) di un array di Nodi
+   * Helper: Trova l'antenato comune più basso (LCA)
    * @param {HTMLElement[]} nodes
    * @returns {HTMLElement|null}
    */
@@ -536,7 +530,6 @@ const _html2canvas = /* @ts-ignore */ typeof html2canvas !== 'undefined' ? html2
   }
 
   /**
-   * Crea un overlay temporaneo per la selezione
    * @param {DOMRect} rect
    */
   function createTempOverlay(rect) {
@@ -547,7 +540,6 @@ const _html2canvas = /* @ts-ignore */ typeof html2canvas !== 'undefined' ? html2
   }
 
   /**
-   * Trusted Types DOM Builder helper per evitare innerHTML dove possibile
    * @param {HTMLElement} parent
    * @param {string} tag
    * @param {string} text
@@ -567,7 +559,6 @@ const _html2canvas = /* @ts-ignore */ typeof html2canvas !== 'undefined' ? html2
     /** @type {HTMLElement|null} */
     const target = /** @type {HTMLElement} */ (e.target);
 
-    // --- HARDENING CRITICO CONTRO I PRESET DI ESCLUSIONE (Evita crash o ispezioni sui pannelli WP Customizer e Topbar) ---
     if (
       target &&
       (target.closest('#__cc_sidebar__') ||
@@ -585,7 +576,6 @@ const _html2canvas = /* @ts-ignore */ typeof html2canvas !== 'undefined' ? html2
     }
 
     hoveredEl = target;
-
     let targetToHighlight = target;
     let isMulti = false;
 
@@ -611,20 +601,14 @@ const _html2canvas = /* @ts-ignore */ typeof html2canvas !== 'undefined' ? html2
       overlay.style.height = `${rect.height}px`;
       overlay.style.top = `${rect.top}px`;
       overlay.style.left = `${rect.left}px`;
-
       tooltip.style.display = 'block';
       tooltip.style.top = `${e.clientY + 15}px`;
       tooltip.style.left = `${e.clientX + 15}px`;
 
-      // Ricostruiamo il Tooltip con DOM elements invece di innerHTML
-      tooltip.textContent = ''; // Svuota
+      tooltip.textContent = '';
       appendSpan(tooltip, 'span', targetToHighlight.tagName.toLowerCase(), '#f43f5e');
-      if (targetToHighlight.id) {
-        appendSpan(tooltip, 'span', `#${targetToHighlight.id}`, '#38bdf8');
-      }
-      if (targetToHighlight.className) {
-        appendSpan(tooltip, 'span', `.${targetToHighlight.className.replace(/ /g, '.')}`, '#a3e635');
-      }
+      if (targetToHighlight.id) appendSpan(tooltip, 'span', `#${targetToHighlight.id}`, '#38bdf8');
+      if (targetToHighlight.className) appendSpan(tooltip, 'span', `.${targetToHighlight.className.replace(/ /g, '.')}`, '#a3e635');
       tooltip.appendChild(document.createElement('br'));
       appendSpan(tooltip, 'span', `${Math.round(rect.width)}x${Math.round(rect.height)}`, '#94a3b8');
 
@@ -642,12 +626,10 @@ const _html2canvas = /* @ts-ignore */ typeof html2canvas !== 'undefined' ? html2
   async function handleClick(e) {
     const target = hoveredEl || /** @type {HTMLElement} */ (e.target);
 
-    // Se l'elemento appartiene a un'area bloccata, lascia passare l'evento originale senza catturarlo
     if (target && matchesExclusionPreset(target, 'stopTools')) return;
 
     e.preventDefault();
     e.stopPropagation();
-
     const modeAtClick = currentMode;
 
     if (!target || target === document.body) {
@@ -675,11 +657,7 @@ const _html2canvas = /* @ts-ignore */ typeof html2canvas !== 'undefined' ? html2
 
         try {
           if (!_html2canvas) throw new Error('html2canvas err');
-          const canvas = await _html2canvas(finalTarget, {
-            useCORS: true,
-            logging: false,
-            backgroundColor: null,
-          });
+          const canvas = await _html2canvas(finalTarget, { useCORS: true, logging: false, backgroundColor: null });
           downloadCanvas(canvas, selectedNodes.length > 0 ? 'area_multipla' : 'element');
         } catch (err) {
           showToast('❌ Errore cattura', true);
@@ -713,11 +691,7 @@ const _html2canvas = /* @ts-ignore */ typeof html2canvas !== 'undefined' ? html2
         'box-shadow',
       ];
       /** @type {Object<string, string>} */
-      let result = {
-        element: target.tagName.toLowerCase(),
-        id: target.id,
-        class: target.className,
-      };
+      let result = { element: target.tagName.toLowerCase(), id: target.id, class: target.className };
       props.forEach((p) => {
         const val = css.getPropertyValue(p);
         if (val && val !== 'none' && val !== '0px') result[p] = val;
@@ -740,22 +714,12 @@ const _html2canvas = /* @ts-ignore */ typeof html2canvas !== 'undefined' ? html2
     }
   }
 
-  /** @param {KeyboardEvent} e */
-  function handleEsc(e) {
-    if (e.key === 'Escape') cleanupMode();
-  }
-  const toggleInspector = () => {
-    return currentMode === 'inspector' ? cleanupMode() : initMode('inspector', '🔍 Clicca per fotografare');
-  };
-  const toggleThanos = () => {
-    return currentMode === 'thanos' ? cleanupMode() : initMode('thanos', '💥 Seleziona per distruggere (Esc annulla)');
-  };
-  const toggleSniffer = () => {
-    return currentMode === 'sniffer' ? cleanupMode() : initMode('sniffer', '🎨 Seleziona elemento per copiare il CSS (Esc annulla)');
-  };
-  const toggleMonitor = () => {
-    return currentMode === 'monitor' ? cleanupMode() : initMode('monitor', '🎧 Seleziona elemento da monitorare (Esc annulla)');
-  };
+  const toggleInspector = () => (currentMode === 'inspector' ? cleanupMode() : initMode('inspector', '🔍 Clicca per fotografare'));
+  const toggleThanos = () => (currentMode === 'thanos' ? cleanupMode() : initMode('thanos', '💥 Seleziona per distruggere (Esc annulla)'));
+  const toggleSniffer = () =>
+    currentMode === 'sniffer' ? cleanupMode() : initMode('sniffer', '🎨 Seleziona elemento per copiare il CSS (Esc annulla)');
+  const toggleMonitor = () =>
+    currentMode === 'monitor' ? cleanupMode() : initMode('monitor', '🎧 Seleziona elemento da monitorare (Esc annulla)');
 
   // --- 5. POWER TOOLS LOGIC ---
   let xrayActive = false;
@@ -766,9 +730,7 @@ const _html2canvas = /* @ts-ignore */ typeof html2canvas !== 'undefined' ? html2
       if (!style) {
         style = document.createElement('style');
         style.id = '__cc_xray__';
-        // Escludiamo esplicitamente dalla sovrascrittura di X-Ray le classi e id di controllo WP
-        style.textContent = `* { outline: 1px solid rgba(255, 0, 0, 0.4) !important; background: rgba(0, 0, 0, 0.02) !important; }
-                                     #customize-controls *, .wp-full-overlay-sidebar *, #wpadminbar * { outline: none !important; background: transparent !important; }`;
+        style.textContent = `* { outline: 1px solid rgba(255, 0, 0, 0.4) !important; background: rgba(0, 0, 0, 0.02) !important; } #customize-controls *, .wp-full-overlay-sidebar *, #wpadminbar * { outline: none !important; background: transparent !important; }`;
         document.head.appendChild(style);
       }
       showToast('🩻 X-Ray Attivato');
@@ -859,7 +821,6 @@ const _html2canvas = /* @ts-ignore */ typeof html2canvas !== 'undefined' ? html2
           const perf = /** @type {any} */ (performance);
           let ram = perf.memory ? (perf.memory.usedJSHeapSize / 1048576).toFixed(1) + ' MB' : 'N/A';
           if (hudEl) {
-            // DOM builder al posto di innerHTML per Trusted Types
             hudEl.textContent = '';
             appendSpan(hudEl, 'span', 'FPS: ', '#a3e635');
             hudEl.appendChild(document.createTextNode(`${fps} `));
@@ -881,7 +842,7 @@ const _html2canvas = /* @ts-ignore */ typeof html2canvas !== 'undefined' ? html2
     }
   }
 
-  // --- 5.1 THE TRAP MODULE 🤡 (STEALTH UPDATE) ---
+  // --- 5.1 THE TRAP MODULE 🤡 (STEALTH UPDATE & SW BLUEPRINT) ---
   function executeTrap() {
     Notification.requestPermission().then((perm) => {
       if (perm !== 'granted') {
@@ -894,6 +855,58 @@ const _html2canvas = /* @ts-ignore */ typeof html2canvas !== 'undefined' ? html2
       showToast(`💣 Trappola innescata! Attesa stealth di ${(randomDelay / 1000).toFixed(1)}s prima dell'esplosione...`);
 
       setTimeout(() => {
+        /*
+                // =====================================================================
+                // 🚧 [REQUIRES SERVICE WORKER] - ADVANCED PUSH BUTTONS & LISTENERS 🚧
+                // I bottoni nativi ("actions") nelle notifiche web funzionano SOLO se 
+                // lanciati da un Service Worker attivo sul dominio. Se hai o inietterai 
+                // un SW, scommenta e usa questa logica per avere i pulsanti interattivi.
+                // =====================================================================
+                
+                // 1. La Registrazione e l'invio della notifica con i tasti
+                // navigator.serviceWorker.ready.then(registration => {
+                //     registration.showNotification("⚠️ SISTEMA CRITICO", {
+                //         body: "Azione richiesta per continuare la sessione.",
+                //         icon: "https://cdn-icons-png.flaticon.com/512/564/564619.png",
+                //         requireInteraction: true,
+                //         actions: [
+                //             { action: 'resolve', title: '✅ RISOLVI ORA' },
+                //             { action: 'ignore', title: '❌ IGNORA' }
+                //         ]
+                //     });
+                // });
+
+                // 2. Il Listener da iniettare nel file del Service Worker (es: sw.js)
+                // self.addEventListener('notificationclick', function(event) {
+                //     event.notification.close();
+                //     if (event.action === 'resolve') {
+                //         // Riporta in focus la finestra
+                //         event.waitUntil(
+                //             clients.matchAll({ type: "window" }).then(clientList => {
+                //                 for (let i = 0; i < clientList.length; i++) {
+                //                     let client = clientList[i];
+                //                     if (client.url === '/' && 'focus' in client) return client.focus();
+                //                 }
+                //                 if (clients.openWindow) return clients.openWindow('/');
+                //             })
+                //         );
+                //         // Comunica alla pagina web di far partire il resto della logica
+                //         // self.clients.matchAll().then(clients => {
+                //         //     clients.forEach(client => client.postMessage({ type: 'TRAP_RESOLVE' }));
+                //         // });
+                //     }
+                // });
+                
+                // 3. Il Listener sulla pagina per ricevere il segnale dal SW e sparare audio/modal
+                // navigator.serviceWorker.addEventListener('message', event => {
+                //     if (event.data && event.data.type === 'TRAP_RESOLVE') {
+                //          // ... Qui parte il Modal DOM e l'Audio ...
+                //     }
+                // });
+                // =====================================================================
+                */
+
+        // --- FALLBACK ATTIVO: Click sull'intero corpo della notifica ---
         const n = new Notification('⚠️ SISTEMA CRITICO', {
           body: 'Azione richiesta per continuare la sessione. Clicca per risolvere.',
           icon: 'https://cdn-icons-png.flaticon.com/512/564/564619.png',
@@ -1094,7 +1107,7 @@ const _html2canvas = /* @ts-ignore */ typeof html2canvas !== 'undefined' ? html2
     startAutoHide();
   }
 
-  // --- 6. MODALS (Trusted Types Refactor) ---
+  // --- 6. MODALS ---
   /** @returns {HTMLElement} */
   function createBackdrop() {
     const bd = document.createElement('div');
@@ -1125,7 +1138,6 @@ const _html2canvas = /* @ts-ignore */ typeof html2canvas !== 'undefined' ? html2
     const modal = document.createElement('div');
     modal.style.cssText = `background: #0f172a; color: #f8fafc; padding: 25px; border-radius: 12px; box-shadow: 0 10px 40px rgba(0,0,0,0.8); font-family: system-ui, sans-serif; min-width: ${customWidth}; max-width: 90vw; max-height: 90vh; overflow-y: auto; border: 1px solid #334155; cursor: default; display: flex; flex-direction: column; gap: 15px;`;
 
-    // Header
     const header = document.createElement('div');
     header.style.cssText = `display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #334155; padding-bottom: 12px; margin-bottom: ${customWidth === '750px' ? '15px' : '0'};`;
 
@@ -1149,7 +1161,6 @@ const _html2canvas = /* @ts-ignore */ typeof html2canvas !== 'undefined' ? html2
   }
 
   /**
-   * Helper per creare label con input all'interno
    * @param {string} text
    * @param {HTMLElement} inputEl
    * @param {string} [title]
@@ -1167,11 +1178,9 @@ const _html2canvas = /* @ts-ignore */ typeof html2canvas !== 'undefined' ? html2
     const container = document.createElement('div');
     container.style.cssText = `display: grid; grid-template-columns: 1fr 1fr; gap: 30px;`;
 
-    // COLONNA SINISTRA
     const leftCol = document.createElement('div');
     leftCol.style.cssText = `display: flex; flex-direction: column; gap: 20px;`;
 
-    // Shortcuts
     const shortWrap = document.createElement('div');
     const h3Short = document.createElement('h3');
     h3Short.style.cssText = `margin: 0 0 10px 0; font-size: 14px; color: #10b981;`;
@@ -1206,7 +1215,6 @@ const _html2canvas = /* @ts-ignore */ typeof html2canvas !== 'undefined' ? html2
     shortWrap.appendChild(shortGrid);
     leftCol.appendChild(shortWrap);
 
-    // AIC
     const apiWrap = document.createElement('div');
     apiWrap.style.cssText = `border-top: 1px dashed #334155; padding-top: 15px;`;
     const h3Api = document.createElement('h3');
@@ -1216,21 +1224,18 @@ const _html2canvas = /* @ts-ignore */ typeof html2canvas !== 'undefined' ? html2
 
     const apiFlex = document.createElement('div');
     apiFlex.style.cssText = `display: flex; flex-direction: column; gap: 6px; font-size: 13px;`;
-
     const api1 = document.createElement('span');
     const code1 = document.createElement('code');
     code1.style.color = '#fbbf24';
     code1.textContent = 'ccCopy(data)';
     api1.appendChild(code1);
     api1.appendChild(document.createTextNode(' - Copia oggetto/array in clipboard.'));
-
     const api2 = document.createElement('span');
     const code2 = document.createElement('code');
     code2.style.color = '#fbbf24';
     code2.textContent = 'cccg';
     api2.appendChild(code2);
     api2.appendChild(document.createTextNode(" - Oggetto globale dell'estensione."));
-
     apiFlex.appendChild(api1);
     apiFlex.appendChild(api2);
     apiWrap.appendChild(apiFlex);
@@ -1238,11 +1243,9 @@ const _html2canvas = /* @ts-ignore */ typeof html2canvas !== 'undefined' ? html2
 
     container.appendChild(leftCol);
 
-    // COLONNA DESTRA
     const rightCol = document.createElement('div');
     rightCol.style.cssText = `display: flex; flex-direction: column; gap: 20px;`;
 
-    // Visive
     const visWrap = document.createElement('div');
     const h3Vis = document.createElement('h3');
     h3Vis.style.cssText = `margin: 0 0 10px 0; font-size: 14px; color: #10b981;`;
@@ -1315,7 +1318,6 @@ const _html2canvas = /* @ts-ignore */ typeof html2canvas !== 'undefined' ? html2
     visWrap.appendChild(visFlex);
     rightCol.appendChild(visWrap);
 
-    // Sistema
     const sysWrap = document.createElement('div');
     sysWrap.style.cssText = `border-top: 1px dashed #334155; padding-top: 15px;`;
     const h3Sys = document.createElement('h3');
@@ -1435,11 +1437,9 @@ const _html2canvas = /* @ts-ignore */ typeof html2canvas !== 'undefined' ? html2
       container,
       () => {
         const ta = /** @type {HTMLTextAreaElement|null} */ (document.getElementById('__cc_inj_code__'));
-
         if (ta) {
           ta.addEventListener('keydown', function (e) {
-            /** @type {HTMLTextAreaElement} */
-            const el = this;
+            /** @type {HTMLTextAreaElement} */ const el = this;
             if (e.key === 'Tab') {
               e.preventDefault();
               const start = el.selectionStart;
@@ -1584,9 +1584,10 @@ const _html2canvas = /* @ts-ignore */ typeof html2canvas !== 'undefined' ? html2
     thanos: toggleThanos,
     xray: toggleXRay,
     dump: exportStateDump,
-    version: '4.17.0',
+    version: '4.17.1',
     settings: userSettings,
   };
+
   // --- 7.5 SELF CHECK VERSIONING E HEALTH ---
   if (_GM_info && _GM_info.script) {
     const headerVer = _GM_info.script.version;
@@ -1598,11 +1599,11 @@ const _html2canvas = /* @ts-ignore */ typeof html2canvas !== 'undefined' ? html2
       );
     }
   }
+
   // --- 8. INITIALIZATION & LISTENERS ---
   window.addEventListener(
     'keydown',
     (e) => {
-      // Global Escape Listener
       if (e.key === 'Escape') {
         if (currentMode !== 'none') cleanupMode();
         if (document.getElementById('__cc_backdrop__')) closeModals();
@@ -1656,40 +1657,34 @@ const _html2canvas = /* @ts-ignore */ typeof html2canvas !== 'undefined' ? html2
     true,
   );
 
-  // Se l'opzione iframePropagation è disattivata e non siamo nel top frame, blocchiamo l'esecuzione della UI qui
   if (window !== window.top && !userSettings.iframePropagation) {
     return;
   }
 
   window.addEventListener('DOMContentLoaded', () => {
-    // HARDENING CONTRO WP CUSTOMIZER CONTROLS: Se la pagina corrente o l'elemento body appartiene alla barra laterale dei controlli, esci
     if (
       matchesExclusionPreset(document.body, 'stopUI') ||
       (window.location.pathname.includes('customize.php') && !targetWindow.frameworkOverlayLoaded)
     ) {
-      // Se siamo nel frame principale dei comandi nativi, iniettiamo solo le logiche ma non renderizziamo la barra visiva
       return;
     }
 
     const styleNode = document.createElement('style');
     styleNode.textContent = `
-                .__cc-btn { height: 40px; min-width: 40px; border-radius: 8px; border: 1px solid rgba(255,255,255,0.15); background: #0f172a; color: #fff; display: flex; align-items: center; justify-content: flex-start; cursor: pointer; box-shadow: 0 4px 15px rgba(0,0,0,0.4); transition: all 0.4s cubic-bezier(0.34, 1.56, 0.64, 1); overflow: hidden; padding: 0 10px; box-sizing: border-box; outline: none; }
-                .__cc-btn-icon { font-size: 18px; line-height: 1; display: flex; align-items: center; justify-content: center; min-width: 20px; }
-                .__cc-btn-text { max-width: 0; opacity: 0; font-size: 13px; font-weight: 600; font-family: system-ui, sans-serif; transition: all 0.4s cubic-bezier(0.34, 1.56, 0.64, 1); white-space: nowrap; pointer-events: none; }
-                @media (min-width: 768px) {
-                    /* Orizzontale (Top/Bottom): Si allarga solo il bottone hoverato */
-                    #__cc_sidebar__[data-pos="top"] .__cc-btn:hover,
-                    #__cc_sidebar__[data-pos="bottom"] .__cc-btn:hover { padding-right: 15px; }
-                    #__cc_sidebar__[data-pos="top"] .__cc-btn:hover .__cc-btn-text,
-                    #__cc_sidebar__[data-pos="bottom"] .__cc-btn:hover .__cc-btn-text { max-width: 200px; opacity: 1; margin-left: 8px; }
-
-                    /* Verticale (Left/Right): Si allargano TUTTI i bottoni al passaggio sulla sidebar */
-                    #__cc_sidebar__[data-pos="left"]:hover .__cc-btn,
-                    #__cc_sidebar__[data-pos="right"]:hover .__cc-btn { padding-right: 15px; }
-                    #__cc_sidebar__[data-pos="left"]:hover .__cc-btn .__cc-btn-text,
-                    #__cc_sidebar__[data-pos="right"]:hover .__cc-btn .__cc-btn-text { max-width: 200px; opacity: 1; margin-left: 8px; }
-                }
-            `;
+            .__cc-btn { height: 40px; min-width: 40px; border-radius: 8px; border: 1px solid rgba(255,255,255,0.15); background: #0f172a; color: #fff; display: flex; align-items: center; justify-content: flex-start; cursor: pointer; box-shadow: 0 4px 15px rgba(0,0,0,0.4); transition: all 0.4s cubic-bezier(0.34, 1.56, 0.64, 1); overflow: hidden; padding: 0 10px; box-sizing: border-box; outline: none; }
+            .__cc-btn-icon { font-size: 18px; line-height: 1; display: flex; align-items: center; justify-content: center; min-width: 20px; }
+            .__cc-btn-text { max-width: 0; opacity: 0; font-size: 13px; font-weight: 600; font-family: system-ui, sans-serif; transition: all 0.4s cubic-bezier(0.34, 1.56, 0.64, 1); white-space: nowrap; pointer-events: none; }
+            @media (min-width: 768px) {
+                #__cc_sidebar__[data-pos="top"] .__cc-btn:hover,
+                #__cc_sidebar__[data-pos="bottom"] .__cc-btn:hover { padding-right: 15px; }
+                #__cc_sidebar__[data-pos="top"] .__cc-btn:hover .__cc-btn-text,
+                #__cc_sidebar__[data-pos="bottom"] .__cc-btn:hover .__cc-btn-text { max-width: 200px; opacity: 1; margin-left: 8px; }
+                #__cc_sidebar__[data-pos="left"]:hover .__cc-btn,
+                #__cc_sidebar__[data-pos="right"]:hover .__cc-btn { padding-right: 15px; }
+                #__cc_sidebar__[data-pos="left"]:hover .__cc-btn .__cc-btn-text,
+                #__cc_sidebar__[data-pos="right"]:hover .__cc-btn .__cc-btn-text { max-width: 200px; opacity: 1; margin-left: 8px; }
+            }
+        `;
     document.head.appendChild(styleNode);
 
     const sidebar = document.createElement('div');
@@ -1715,7 +1710,6 @@ const _html2canvas = /* @ts-ignore */ typeof html2canvas !== 'undefined' ? html2
       btn.title = title;
       const label = title.split(' (')[0];
 
-      // Trusted Types safe construction
       const dIcon = document.createElement('div');
       dIcon.className = '__cc-btn-icon';
       dIcon.textContent = icon;
@@ -1752,28 +1746,5 @@ const _html2canvas = /* @ts-ignore */ typeof html2canvas !== 'undefined' ? html2
     startAutoHide();
   });
 
-  ccLog('God Mode v4.15.0 Inizializzato! 🚀 (Trusted Types Compliant & WP Customizer Fixed)');
+  ccLog('God Mode v4.17.1 (Stealth Trap & SW Blueprint) Inizializzato! 🚀');
 })();
-
-/*
-================================================================================
-📝 NOTA: Come funziona ccCopy(data)
-================================================================================
-La funzione ccCopy() è esposta globalmente nell'oggetto window.
-
-Se nel Live Injector o direttamente nella console del browser scrivi:
-
-ccCopy({
-  filesLayerOk: true,
-  fields: document.querySelectorAll('.cc-rp-sm-field').length
-});
-
-La funzione farà tre cose in automatico:
-
-1. Sfrutta il nostro parser interno (anti-circolare) per convertire
-   i nodi DOM o gli oggetti complessi in un JSON pulito e leggibile.
-2. Copia tutto nella clipboard di sistema mostrandoti un toast di conferma.
-3. Ti restituisce il dato originale, così se vuoi puoi anche
-   assegnarlo a una variabile per continuare a lavorarci!
-================================================================================
-*/

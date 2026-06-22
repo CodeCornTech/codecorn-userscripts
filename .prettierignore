@@ -1,0 +1,22 @@
+# Build e dipendenze
+node_modules/
+dist/
+build/
+coverage/
+
+# File minificati e bundle
+*.min.js
+*.bundle.js
+
+# Ignora esplicitamente script esterni di vendor
+vendor/
+lib/
+
+# File di lock
+package-lock.json
+yarn.lock
+pnpm-lock.yaml
+
+# Varie
+.DS_Store
+*.log
