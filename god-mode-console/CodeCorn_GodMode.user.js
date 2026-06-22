@@ -1,7 +1,7 @@
 // ==UserScript==
-// @name         CodeCorn Console Capture (God Mode v4.17.2 - Stealth Trap & SW Blueprint)
+// @name         CodeCorn Console Capture (God Mode v4.17.3 - Stealth Trap & SW Blueprint)
 // @namespace    https://codecorn.it/
-// @version      4.17.2
+// @version      4.17.3
 // @description  Log, Spy, Power Tools, Global Settings & Inspector! Fully Typed, Trusted Types Compliant.
 // @match        *://*/*
 // @run-at       document-start
@@ -13,7 +13,7 @@
 // ==/UserScript==
 
 // --- AMBIENT DECLARATIONS PER VS CODE ---
-/* global html2canvas, GM_getValue, GM_setValue, GM_setClipboard, GM_info, unsafeWindow */
+/* global html2canvas */
 /* @ts-ignore */
 const _GM_getValue = typeof GM_getValue !== 'undefined' ? GM_getValue : null;
 /* @ts-ignore */
@@ -34,8 +34,11 @@ const _html2canvas = typeof html2canvas !== 'undefined' ? html2canvas : null;
 
 (() => {
     'use strict';
-
-    if (window.location.hostname.includes('chatgpt.com')) return;
+    const { hostname } = window.location || {};
+    if (['chatgpt.com', 'youtube.com', 'youtube.it', 'music.youtube.com', 'music.youtube.it'].includes(hostname)) {
+        ccLog(`Skipped CCCG: ${hostname}`);
+        return;
+    }
 
     // --- 0. PRESET DI ESCLUSIONE (SMART HARDENING) ---
     /** @type {Object<string, ExclusionPreset>} */
@@ -170,12 +173,52 @@ const _html2canvas = typeof html2canvas !== 'undefined' ? html2canvas : null;
         }
     }
 
+    let quotaWarningShown = false;
+
     /** @param {Array<Object>} logs */
     function saveHistoryLogs(logs) {
-        try {
-            targetWindow.localStorage.setItem(STORAGE_KEY, JSON.stringify(logs.slice(-userSettings.maxLogs)));
-        } catch (e) {
-            originalConsole.warn('[CC] History save failed', e);
+        let logsToSave = logs.slice(-userSettings.maxLogs);
+        let saved = false;
+
+        while (!saved && logsToSave.length > 0) {
+            try {
+                targetWindow.localStorage.setItem(STORAGE_KEY, JSON.stringify(logsToSave));
+                saved = true;
+            } catch (e) {
+                // Riconosciamo l'errore di Quota Piena
+                if (e.name === 'QuotaExceededError' || e.code === 22 || e.name === 'NS_ERROR_DOM_QUOTA_REACHED') {
+                    // Tagliamo via il 15% dei log più vecchi e riproviamo a ciclo continuo (previene i freeze)
+                    const chopSize = Math.max(1, Math.floor(logsToSave.length * 0.15));
+                    logsToSave = logsToSave.slice(chopSize);
+
+                    // Mostriamo il "Bottone in Console" una sola volta per non spammare
+                    if (!quotaWarningShown) {
+                        quotaWarningShown = true;
+
+                        // 🔥 LA MAGIA: Creiamo un finto bottone interattivo per la DevTools
+                        const clearBtn = {};
+                        Object.defineProperty(clearBtn, '💣 CLICCA_QUI_PER_SVUOTARE_LA_HISTORY', {
+                            get: function () {
+                                targetWindow.localStorage.removeItem(STORAGE_KEY);
+                                originalConsole.info(
+                                    '%c [CC] 🧹 Storage History piallato con successo! ',
+                                    'background:#ef4444; color:white; font-weight:bold; padding: 4px; border-radius: 4px;',
+                                );
+                                return 'Svuotamento completato.';
+                            },
+                        });
+
+                        originalConsole.warn(
+                            "%c⚠️ [God Mode] LocalStorage Pieno! Auto-trimming attivato per evitare freeze.\n👉 Espandi l'oggetto qui sotto e clicca sui puntini (...) per piallare tutto:",
+                            'color: #facc15; font-size: 13px; font-weight: bold;',
+                        );
+                        originalConsole.dir(clearBtn);
+                    }
+                } else {
+                    originalConsole.warn('[CC] History save failed (Not a quota issue)', e);
+                    break;
+                }
+            }
         }
     }
 
@@ -198,9 +241,9 @@ const _html2canvas = typeof html2canvas !== 'undefined' ? html2canvas : null;
         if (typeof value === 'function') return `[Function: ${value.name || 'anonymous'}]`;
         if (value instanceof Error) return { type: 'Error', name: value.name, message: value.message };
         if (value instanceof Date) return value.toISOString();
-        if (typeof targetWindow.HTMLElement !== 'undefined' && value instanceof targetWindow.HTMLElement)
+        if (typeof targetWindow.HTMLElement !== 'undefined' && value instanceof targetWindow.HTMLElement) {
             return `[DOM Element: ${value.tagName}]`;
-
+        }
         if (seen.has(value)) return '[Circular]';
         seen.add(value);
 
@@ -865,11 +908,11 @@ const _html2canvas = typeof html2canvas !== 'undefined' ? html2canvas : null;
                 /*
                 // =====================================================================
                 // 🚧 [REQUIRES SERVICE WORKER] - ADVANCED PUSH BUTTONS & LISTENERS 🚧
-                // I bottoni nativi ("actions") nelle notifiche web funzionano SOLO se 
-                // lanciati da un Service Worker attivo sul dominio. Se hai o inietterai 
+                // I bottoni nativi ("actions") nelle notifiche web funzionano SOLO se
+                // lanciati da un Service Worker attivo sul dominio. Se hai o inietterai
                 // un SW, scommenta e usa questa logica per avere i pulsanti interattivi.
                 // =====================================================================
-                
+
                 // 1. La Registrazione e l'invio della notifica con i tasti
                 // navigator.serviceWorker.ready.then(registration => {
                 //     registration.showNotification("⚠️ SISTEMA CRITICO", {
@@ -903,7 +946,7 @@ const _html2canvas = typeof html2canvas !== 'undefined' ? html2canvas : null;
                 //         // });
                 //     }
                 // });
-                
+
                 // 3. Il Listener sulla pagina per ricevere il segnale dal SW e sparare audio/modal
                 // navigator.serviceWorker.addEventListener('message', event => {
                 //     if (event.data && event.data.type === 'TRAP_RESOLVE') {
@@ -943,13 +986,14 @@ const _html2canvas = typeof html2canvas !== 'undefined' ? html2canvas : null;
 
                     const trapBtn = document.createElement('button');
                     trapBtn.id = '__cc_trap_yes__';
-                    trapBtn.style.cssText = 'background:#ef4444; color:#fff; border:none; padding:15px 50px; font-size:22px; font-weight:bold; border-radius:8px; cursor:pointer; margin-top:20px; transition: all 0.2s; outline:none;';
+                    trapBtn.style.cssText =
+                        'background:#ef4444; color:#fff; border:none; padding:15px 50px; font-size:22px; font-weight:bold; border-radius:8px; cursor:pointer; margin-top:20px; transition: all 0.2s; outline:none;';
                     trapBtn.textContent = 'YES';
 
                     modalBox.appendChild(trapTitle);
                     modalBox.appendChild(trapDesc);
                     modalBox.appendChild(trapBtn);
-                    
+
                     trapBd.appendChild(modalBox);
                     document.body.appendChild(trapBd);
 
@@ -1615,7 +1659,7 @@ const _html2canvas = typeof html2canvas !== 'undefined' ? html2canvas : null;
         thanos: toggleThanos,
         xray: toggleXRay,
         dump: exportStateDump,
-        version: '4.17.2',
+        version: '4.17.3',
         settings: userSettings,
     };
 
@@ -1783,5 +1827,5 @@ const _html2canvas = typeof html2canvas !== 'undefined' ? html2canvas : null;
         startAutoHide();
     });
 
-    ccLog('God Mode v4.17.2 (Stealth Trap & SW Blueprint) Inizializzato! 🚀 (Trusted Types Compliant)');
+    ccLog('God Mode v4.17.3 (Stealth Trap & SW Blueprint) Inizializzato! 🚀 (Trusted Types Compliant)');
 })();
