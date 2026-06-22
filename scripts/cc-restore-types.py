@@ -85,34 +85,74 @@ def restore(orig_file, stripped_file, output_file):
 
     output_lines = []
     restored_count = 0
+    skipped_count = 0
+
+    in_stripped_block_comment = False
+    stripped_comment_buffer = []
 
     for line in stripped_lines:
         stripped = line.strip()
 
-        # Se la riga corrente del nuovo file corrisponde a un'ancora mappata
-        if stripped in comments_map and comments_map[stripped]:
-            # Pop() garantisce l'ordine cronologico se ci sono ancore identiche
-            comment_block = comments_map[stripped].pop(0)
-            output_lines.append(comment_block)
-            restored_count += 1
+        # Gestione commenti multiriga preesistenti nel file sforbiciato
+        if not in_stripped_block_comment and stripped.startswith("/*"):
+            in_stripped_block_comment = True
+            stripped_comment_buffer.append(line)
+            output_lines.append(line)
+            if "*/" in stripped:
+                in_stripped_block_comment = False
+            continue
+
+        if in_stripped_block_comment:
+            stripped_comment_buffer.append(line)
+            output_lines.append(line)
+            if "*/" in stripped:
+                in_stripped_block_comment = False
+            continue
+
+        # Gestione commenti singola riga preesistenti nel file sforbiciato
+        if stripped.startswith("//"):
+            stripped_comment_buffer.append(line)
+            output_lines.append(line)
+            continue
+
+        # Le righe vuote non invalidano l'associazione del buffer all'ancora successiva
+        if not stripped:
+            output_lines.append(line)
+            continue
+
+        # --- Trovata una riga di codice valida (ancora) ---
+        anchor = stripped
+
+        if anchor in comments_map and comments_map[anchor]:
+            # Consumiamo sempre il commento in ordine cronologico dalla mappa originale
+            orig_comment_block = comments_map[anchor].pop(0)
+
+            # Condizione di sovrascrittura: se lo sforbiciato NON ha commenti a buffer, iniettiamo.
+            if not stripped_comment_buffer:
+                output_lines.append(orig_comment_block)
+                restored_count += 1
+            else:
+                # Il file sforbiciato possiede già un commento per questa ancora, vince lui.
+                skipped_count += 1
 
         output_lines.append(line)
+        stripped_comment_buffer = []  # Reset del buffer locale dopo il parsing dell'ancora
 
     with open(output_file, "w", encoding="utf-8") as f:
         f.writelines(output_lines)
 
     print(f"\n{C.GREEN}{C.BOLD}[+] Operazione Completata!{C.RESET}")
     print(f"{C.GREEN}[+] Ripristinati {C.BOLD}{restored_count}{C.RESET}{C.GREEN} su {C.BOLD}{total_blocks}{C.RESET}{C.GREEN} blocchi di commenti/tipi.{C.RESET}")
+    if skipped_count > 0:
+        print(f"{C.YELLOW}[!] Mantenuti {C.BOLD}{skipped_count}{C.RESET}{C.YELLOW} blocchi nativi dello script sforbiciato (override evitato).{C.RESET}")
     print(f"{C.GREEN}[+] Nuovo file salvato in: {C.BOLD}{C.YELLOW}{output_file}{C.RESET}\n")
 
 
 if __name__ == "__main__":
-    # Gestione argomenti vuoti o flag di help
     if len(sys.argv) == 1 or sys.argv[1] in ("-h", "--help"):
         print_usage()
         sys.exit(0)
 
-    # Controllo numero argomenti
     if len(sys.argv) != 4:
         print(f"\n{C.BOLD}{C.RED}❌ Errore:{C.RESET} {C.RED}Numero di argomenti non valido.{C.RESET}")
         print_usage()

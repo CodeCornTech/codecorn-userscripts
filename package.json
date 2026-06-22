@@ -1,6 +1,6 @@
 {
   "name": "codecorn-userscripts",
-  "version": "4.15.0",
+  "version": "4.17.2",
   "description": "A collection of advanced Tampermonkey userscripts crafted for debugging, automation, and UI manipulation",
   "main": "index.js",
   "scripts": {
@@ -12,7 +12,8 @@
     "new:script": "bash -c 'mkdir -p \"$0\" && cp template/jsconfig.json \"$0/\" && touch \"$0/$0.user.js\"' ",
     "release": "node scripts/release.js",
     "copy:raw": "cat god-mode-console/CodeCorn_GodMode.user.js | pbcopy && echo '✅ Script RAW copiato nella clipboard!'",
-    "copy:min": "npm run build:godmode && cat god-mode-console/dist/CodeCorn_GodMode.min.user.js | pbcopy && echo '✅ Script MINIFIED buildato e copiato nella clipboard!'"
+    "copy:min": "npm run build:godmode && cat god-mode-console/dist/CodeCorn_GodMode.min.user.js | pbcopy && echo '✅ Script MINIFIED buildato e copiato nella clipboard!'",
+    "restore:types": "python3 scripts/cc-restore-types.py"
   },
   "author": "Federico Girolami",
   "license": "MIT",
