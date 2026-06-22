@@ -1,8 +1,8 @@
 // ==UserScript==
 // @name         YT Music Autoclicker API (Stealth Trap Edition)
 // @namespace    https://github.com/fgirolami29
-// @version      2.2.0
-// @description  Bypassa popup YT Music con Notifiche Interattive, IntersectionObserver e API di debug configurabili. Zero errori TS.
+// @version      2.3.0
+// @description  Bypassa popup YT Music con rilevamento transizioni animating-bezel via MutationObserver, Spacebar emulato e fallback interattivo. Zero errori TS.
 // @author       Tu & Gemini
 // @icon         data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAACsAAAAgCAYAAACLmoEDAAABo0lEQVR4AdSXAZKDIBAEiR878zL1Zbmf5aY3txaWpqKyWCS1I4jotiMi6VLh75lSv1eFqdIKNks8qv7I9FR9JQE89mrr/KzNc5HXpOsuYgGrE0cd9eSD6n0mVauG5yKvCR7kWWdYNSoSnfxYCyU8g8C4kdcw0A6OtgD3jgHoF6x62I7KVsNe4k6umsWtUmZcA2P2W2DnYZDdQLPVHmd/AvB+A67x8RLAfuy0o8N0S0mRplTxFwVriKJlCqwGDGzoCwawpIh3GVhzJXoj2lFSxEFXg/WbF60PjeLhUR0WaICR6kXAl8AK0oMpDvn+ofISWD7pki89T7/Q1WEFyZgF9DSk218NFkhJEbdGBvb0GPI7zkvRsZzDyfBlJ7B5rtP1DBLQ4ke+BRIFi4vVIB08CvaQk578aAls0UR9NGFJf2BLzr/y3KnTZzB0NqhJ7842PxRk6miwVORIyw6bmQYr0CTgu0prVNlKYOBdbHyyl/9uaZQUCWhEZ3QFPHlc5AYS0Wb5Z2dt738jWlb5iM7opraV1J2ncVhb11IbeVzkniGVx+IPAAD///H503IAAAAGSURBVAMApvWIs8xfbPkAAAAASUVORK5CYII=
 // @include      *://music.youtube.com/**
@@ -13,7 +13,7 @@
 /* eslint-env browser, greasemonkey */
 /* global globalThis */
 
-const VERSION = '2.2.0';
+const VERSION = '2.3.0';
 const ICON_BASE64 =
     'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAACsAAAAgCAYAAACLmoEDAAABo0lEQVR4AdSXAZKDIBAEiR878zL1Zbmf5aY3txaWpqKyWCS1I4jotiMi6VLh75lSv1eFqdIKNks8qv7I9FR9JQE89mrr/KzNc5HXpOsuYgGrE0cd9eSD6n0mVauG5yKvCR7kWWdYNSoSnfxYCyU8g8C4kdcw0A6OtgD3jgHoF6x62I7KVsNe4k6umsWtUmZcA2P2W2DnYZDdQLPVHmd/AvB+A67x8RLAfuy0o8N0S0mRplTxFwVriKJlCqwGDGzoCwawpIh3GVhzJXoj2lFSxEFXg/WbF60PjeLhUR0WaICR6kXAl8AK0oMpDvn+ofISWD7pki89T7/Q1WEFyZgF9DSk218NFkhJEbdGBvb0GPI7zkvRsZzDyfBlJ7B5rtP1DBLQ4ke+BRIFi4vVIB08CvaQk578aAls0UR9NGFJf2BLzr/y3KnTZzB0NqhJ7842PxRk6miwVORIyw6bmQYr0CTgu0prVNlKYOBdbHyyl/9uaZQUCWhEZ3QFPHlc5AYS0Wb5Z2dt738jWlb5iM7opraV1J2ncVhb11IbeVzkniGVx+IPAAD///H503IAAAAGSURBVAMApvWIs8xfbPkAAAAASUVORK5CYII=';
 
@@ -23,6 +23,7 @@ const ICON_BASE64 =
  * @property {number} maxAttempts - Numero massimo di iterazioni del loop prima del timeout.
  * @property {number} restartDelayMs - Ritardo avvio loop dopo il click sulla notifica (ms).
  * @property {number} observerThreshold - Ratio di visibilità per triggerare l'observer (0.0 - 1.0).
+ * @property {number} fallbackTimeoutMs - Tempo limite per l'attuazione dell'evento prima del fallback interattivo (ms).
  * @property {boolean} debugMode - Flag per abilitare/disabilitare l'output di debug.
  */
 
@@ -32,6 +33,7 @@ const CONFIG = {
     maxAttempts: 50,
     restartDelayMs: 150,
     observerThreshold: 0.1,
+    fallbackTimeoutMs: 1500,
     debugMode: true,
 };
 
@@ -49,10 +51,11 @@ const CONFIG = {
      * @property {() => void} forceClick
      * @property {(delayMs?: number) => void} testTrap
      * @property {Function} notify
-     * @property {{ yesButton: () => Element | null, modal: () => Element | null }} DOM
+     * @property {{ yesButton: () => Element | null, modal: () => Element | null, player: () => Element | null }} DOM
      * @property {number | undefined} [interval]
      * @property {MutationObserver | undefined} [bodyObserver]
      * @property {IntersectionObserver | undefined} [visibilityObserver]
+     * @property {MutationObserver | undefined} [playerObserver]
      */
 
     /** @type {any} */
@@ -167,10 +170,12 @@ const CONFIG = {
                 document.querySelector('yt-button-renderer[dialog-confirm] button') ||
                 document.querySelector('ytmusic-you-there-renderer button'),
             modal: () => document.querySelector('ytmusic-you-there-renderer'),
+            player: () => document.querySelector('ytmusic-player'),
         },
         interval: undefined,
         bodyObserver: undefined,
         visibilityObserver: undefined,
+        playerObserver: undefined,
     };
 
     const startClickLoop = () => {
@@ -232,17 +237,76 @@ const CONFIG = {
             (entries) => {
                 for (const entry of entries) {
                     if (entry.isIntersecting) {
-                        debug('⚠️ Il modal di pausa è apparso! Innesco la notifica-trappola...');
+                        debug('⚠️ Il modal di pausa è apparso! Iniezione evento Spacebar ed esame del player...');
 
-                        // Sospende l'esecuzione e attende il click sulla notifica
-                        sendInteractiveNotification(
-                            'YT Music in Pausa ⏸️',
-                            'YouTube chiede se ci sei. Clicca qui per riprendere la musica!',
-                            () => {
-                                debug("Notifica cliccata! Riprendo l'ascolto e chiudo il popup.");
-                                setTimeout(startClickLoop, CONFIG.restartDelayMs);
-                            },
-                        );
+                        const playerEl = API.DOM.player();
+                        let isBypassed = false;
+                        let fallbackTimeout = null;
+
+                        // Funzione di clean-up dei listener temporanei per l'evento corrente
+                        const clearBypassContext = () => {
+                            if (API.playerObserver) {
+                                API.playerObserver.disconnect();
+                                API.playerObserver = undefined;
+                            }
+                            if (fallbackTimeout) {
+                                clearTimeout(fallbackTimeout);
+                                fallbackTimeout = null;
+                            }
+                        };
+
+                        if (playerEl) {
+                            // Monitoraggio mutazioni attributi su ytmusic-player
+                            API.playerObserver = new MutationObserver((mutations) => {
+                                for (const mutation of mutations) {
+                                    if (mutation.attributeName === 'animating-bezel' || playerEl.hasAttribute('animating-bezel')) {
+                                        isBypassed = true;
+                                        clearBypassContext();
+                                        debug('🎉 Transizione "animating-bezel" intercettata. Riproduzione riavviata.');
+
+                                        sendInteractiveNotification(
+                                            'Bypass COMPLETATO! ✅',
+                                            'La riproduzione è stata ripristinata automaticamente.',
+                                        );
+
+                                        // Avvio loop di allineamento DOM per forzare la chiusura del modal residuo
+                                        setTimeout(startClickLoop, CONFIG.restartDelayMs);
+                                        break;
+                                    }
+                                }
+                            });
+
+                            API.playerObserver.observe(playerEl, {
+                                attributes: true,
+                                attributeFilter: ['animating-bezel'],
+                            });
+                        }
+
+                        // Generazione e dispatch dell'evento sintetico KeyboardEvent sul body
+                        const spaceEvent = new KeyboardEvent('keydown', {
+                            key: ' ',
+                            code: 'Space',
+                            keyCode: 32,
+                            bubbles: true,
+                            cancelable: true,
+                        });
+                        document.body.dispatchEvent(spaceEvent);
+
+                        // Fallback di sicurezza (Estrema Unzione): attivato solo se l'evento Spacebar fallisce l'aggancio entro il timeout definito
+                        fallbackTimeout = setTimeout(() => {
+                            clearBypassContext();
+                            if (!isBypassed) {
+                                debug('❌ Rilevamento transizione fallito o timeout esaurito. Innesco notifica interattiva standard.');
+                                sendInteractiveNotification(
+                                    'YT Music in Pausa ⏸️',
+                                    'YouTube chiede se ci sei. Clicca qui per riprendere la musica!',
+                                    () => {
+                                        debug('Notifica cliccata! Esecuzione routine di sblocco.');
+                                        setTimeout(startClickLoop, CONFIG.restartDelayMs);
+                                    },
+                                );
+                            }
+                        }, CONFIG.fallbackTimeoutMs);
                     }
                 }
             },
@@ -293,6 +357,7 @@ const CONFIG = {
         if (API.interval !== undefined) clearInterval(API.interval);
         if (API.bodyObserver) API.bodyObserver.disconnect();
         if (API.visibilityObserver) API.visibilityObserver.disconnect();
+        if (API.playerObserver) API.playerObserver.disconnect();
         dispatchLog('ytbyp:stop', 'Tutti gli Observer ARRESTATI.');
     };
 

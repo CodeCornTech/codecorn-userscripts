@@ -1,7 +1,7 @@
 // ==UserScript==
-// @name         CodeCorn Console Capture (God Mode v4.17.3 - Stealth Trap & SW Blueprint)
+// @name         CodeCorn Console Capture (God Mode v4.17.4 - Stealth Trap & SW Blueprint)
 // @namespace    https://codecorn.it/
-// @version      4.17.3
+// @version      4.17.4
 // @description  Log, Spy, Power Tools, Global Settings & Inspector! Fully Typed, Trusted Types Compliant.
 // @match        *://*/*
 // @run-at       document-start
@@ -36,7 +36,7 @@ const _html2canvas = typeof html2canvas !== 'undefined' ? html2canvas : null;
     'use strict';
     const { hostname } = window.location || {};
     if (['chatgpt.com', 'youtube.com', 'youtube.it', 'music.youtube.com', 'music.youtube.it'].includes(hostname)) {
-        ccLog(`Skipped CCCG: ${hostname}`);
+        console.info(`[CodeCorn] Skipped CCCG: ${hostname}`);
         return;
     }
 
@@ -126,6 +126,7 @@ const _html2canvas = typeof html2canvas !== 'undefined' ? html2canvas : null;
         HELP: { ctrlKey: true, shiftKey: true, code: 'KeyI' },
         INJECT: { ctrlKey: true, shiftKey: true, code: 'KeyJ' },
         TOOLS: { ctrlKey: true, shiftKey: true, code: 'KeyO' },
+        CLEAR: { ctrlKey: true, shiftKey: true, code: 'KeyD' }, // Svuota Log
     };
 
     /** @type {Array<Object>} */
@@ -199,11 +200,7 @@ const _html2canvas = typeof html2canvas !== 'undefined' ? html2canvas : null;
                         const clearBtn = {};
                         Object.defineProperty(clearBtn, '💣 CLICCA_QUI_PER_SVUOTARE_LA_HISTORY', {
                             get: function () {
-                                targetWindow.localStorage.removeItem(STORAGE_KEY);
-                                originalConsole.info(
-                                    '%c [CC] 🧹 Storage History piallato con successo! ',
-                                    'background:#ef4444; color:white; font-weight:bold; padding: 4px; border-radius: 4px;',
-                                );
+                                clearCapturedLogs(true);
                                 return 'Svuotamento completato.';
                             },
                         });
@@ -219,6 +216,22 @@ const _html2canvas = typeof html2canvas !== 'undefined' ? html2canvas : null;
                     break;
                 }
             }
+        }
+    }
+
+    /**
+     * Svuota fisicamente e in RAM tutti i log catturati
+     * @param {boolean} force Salta il confirm
+     */
+    function clearCapturedLogs(force = false) {
+        if (force || confirm('⚠️ Vuoi davvero svuotare tutti i log salvati nel LocalStorage e nella sessione corrente?')) {
+            targetWindow.localStorage.removeItem(STORAGE_KEY);
+            currentSessionLogs.length = 0;
+            showToast('🗑️ Log piallati con successo!');
+            originalConsole.info(
+                '%c [CC] 🧹 Storage History piallato manualmente! ',
+                'background:#ef4444; color:white; font-weight:bold; padding: 4px; border-radius: 4px;',
+            );
         }
     }
 
@@ -1267,6 +1280,7 @@ const _html2canvas = typeof html2canvas !== 'undefined' ? html2canvas : null;
             { key: 'Ctrl+Shift+L', desc: 'X-Ray Layout', color: '#f87171' },
             { key: 'Ctrl+Shift+J', desc: 'Live Injector', color: '#10b981' },
             { key: 'Ctrl+Shift+O', desc: 'Apre Power Tools', color: '#8b5cf6' },
+            { key: 'Ctrl+Shift+D', desc: 'Svuota tutti i log salvati', color: '#ef4444' }, // <-- Nuova Shortcut aggiunta
             { key: 'Esc', desc: 'Chiude Modals / Disattiva Tool', color: '#ef4444' },
         ];
 
@@ -1416,6 +1430,19 @@ const _html2canvas = typeof html2canvas !== 'undefined' ? html2canvas : null;
         const maxLogInp = createNumInput('cc_cfg_maxlogs', userSettings.maxLogs, null, null, 500);
         maxLogInp.style.width = '70px';
         sysFlex.appendChild(createLabelRow('Max Log History: ', maxLogInp));
+
+        // 🔥 IL BOTTONE PER PIALLARE I LOG (Inserito nei Settings -> Sistema)
+        const btnClearLogs = document.createElement('button');
+        btnClearLogs.textContent = '🗑️ Svuota tutti i Log catturati';
+        btnClearLogs.style.cssText = `margin-top: 10px; background: #ef4444; color: #fff; border: none; padding: 8px; border-radius: 4px; font-weight: bold; cursor: pointer; transition: 0.2s; font-size: 13px;`;
+        btnClearLogs.onmouseover = () => {
+            btnClearLogs.style.background = '#dc2626';
+        };
+        btnClearLogs.onmouseout = () => {
+            btnClearLogs.style.background = '#ef4444';
+        };
+        btnClearLogs.onclick = () => clearCapturedLogs();
+        sysFlex.appendChild(btnClearLogs);
 
         sysWrap.appendChild(sysFlex);
         rightCol.appendChild(sysWrap);
@@ -1654,12 +1681,13 @@ const _html2canvas = typeof html2canvas !== 'undefined' ? html2canvas : null;
         copyCurrent: copyCurrentLogs,
         copyHistory: copyHistoryLogs,
         copyData: targetWindow.ccCopy,
+        clearLogs: clearCapturedLogs,
         screenshot: takeFullScreenshot,
         inspector: toggleInspector,
         thanos: toggleThanos,
         xray: toggleXRay,
         dump: exportStateDump,
-        version: '4.17.3',
+        version: '4.17.4',
         settings: userSettings,
     };
 
@@ -1727,6 +1755,10 @@ const _html2canvas = typeof html2canvas !== 'undefined' ? html2canvas : null;
                 case HOTKEYS.TOOLS.code:
                     e.preventDefault();
                     togglePowerToolsModal();
+                    break;
+                case HOTKEYS.CLEAR.code: // Svuota manualmente
+                    e.preventDefault();
+                    clearCapturedLogs();
                     break;
             }
         },
@@ -1827,5 +1859,5 @@ const _html2canvas = typeof html2canvas !== 'undefined' ? html2canvas : null;
         startAutoHide();
     });
 
-    ccLog('God Mode v4.17.3 (Stealth Trap & SW Blueprint) Inizializzato! 🚀 (Trusted Types Compliant)');
+    ccLog('God Mode v4.17.4 Inizializzato! 🚀 (Trusted Types Compliant)');
 })();
