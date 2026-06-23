@@ -1,0 +1,15 @@
+{
+  "compilerOptions": {
+    "target": "ES2022",
+    "module": "ESNext",
+    "lib": ["DOM", "ES2022"],
+    "checkJs": true,
+    "strict": false
+  },
+  "include": [
+    "*.js"
+  ],
+  "exclude": [
+    "_PREV"
+  ]
+}

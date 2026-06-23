@@ -1,0 +1,61 @@
+.
+├── .vscode
+│   ├── settings.json
+│   ├── task_shortcuts.md
+│   └── tasks.json
+├── _FREEZE
+│   ├── _PREV
+│   │   ├── 4.17.1.js
+│   │   ├── CodeCorn_GodMode.userV11.js.off
+│   │   ├── CodeCorn_GodMode.userV12.js.off
+│   │   ├── CodeCorn_GodMode.userV13.1.js.off
+│   │   ├── CodeCorn_GodMode.userV13.2.js.off
+│   │   ├── mega.json
+│   │   ├── music_polymer_inlined_html.js
+│   │   ├── telegram-bot-webhook-audit-20260620-154845.json
+│   │   ├── telegram-chatid-recovery-20260620-155027.json
+│   │   └── telegram-chatid-recovery-20260620-155837.json
+│   ├── .DS_Store
+│   └── 4.1.15.zip
+├── god-mode-console
+│   ├── CodeCorn_GodMode.user.js
+│   ├── README.md
+│   └── jsconfig.json
+├── scripts
+│   ├── _STASH
+│   │   └── cc-restore-typesV0.py
+│   ├── _cc-freeze.sh
+│   ├── cc-restore-types.py
+│   └── release.js
+├── youtube-byp
+│   ├── _PREV
+│   │   ├── Ah, grandissima scoperta! Ti sei appena .md
+│   │   ├── Ah, maledizione! YouTube cambia spessiss.md
+│   │   ├── Avere una GitHub Page dedicata trasforma.md
+│   │   ├── Ecco svelato l'arcano dai tuoi log! L'ob.md
+│   │   ├── Hai perfettamente ragione, occhio di fal.md
+│   │   ├── Untitled-12.gojs
+│   │   ├── Untitled-2.js
+│   │   ├── Untitled-4.json
+│   │   ├── Untitled-9.js
+│   │   ├── ccCopy(.js
+│   │   ├── undefined
+│   │   ├── ytbyp230.js
+│   │   └── ytbypV203.js
+│   ├── dumpDOMel.js
+│   ├── jsconfig.json
+│   ├── testoptim.md
+│   ├── visdump.md
+│   └── ytbyp.js
+├── .DS_Store
+├── .gitattributes
+├── .gitignore
+├── .prettierignore
+├── .prettierrc.json
+├── README.md
+├── index.html
+├── package-lock.json
+├── package.json
+└── tree.txt
+
+9 directories, 50 files

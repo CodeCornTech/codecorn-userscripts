@@ -20,10 +20,3 @@ pnpm-lock.yaml
 # Varie
 .DS_Store
 *.log
-
-# Ignora cartelle di staging
-_FREEZE/
-_STASH/
-_PREV/
-_DEV/
-_SHIT/

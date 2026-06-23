@@ -1,7 +1,26 @@
-.DS_Store
-.vscode/
+# Dipendenze
 node_modules/
-byp yt music/
+package-lock.json
+yarn.lock
+
+# Build e Dist
+dist/
+build/
+
+# CodeCorn Staging & Backup
+_FREEZE/
+_STASH/
 _PREV/
-_FREEZE/_PREV/
-_FREEZE/_PREV
+_DEV/
+_SHIT/
+
+# OS e Logs
+.DS_Store
+*.log
+*.zip
+*.tar.gz
+
+# Ambiente
+.env
+.env.local
+secrets/
