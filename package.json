@@ -1,6 +1,6 @@
 {
   "name": "codecorn-userscripts",
-  "version": "4.17.2",
+  "version": "4.17.6",
   "description": "A collection of advanced Tampermonkey userscripts crafted for debugging, automation, and UI manipulation",
   "scripts": {
     "test": "npm run format:checktest && echo 'Running live server...' && npm run dev",
