@@ -1,5 +1,5 @@
 // ==UserScript==
-// @name         CodeCorn Console Capture (God Mode v4.17.5 - Stealth Trap & SW Blueprint)
+// @name         CodeCorn Console Capture (God Mode v4.17.6 - Stealth Trap & SW Blueprint)
 // @namespace    https://codecorn.it/
 // @version      4.17.6
 // @description  Log, Spy, Power Tools, Global Settings & Inspector! Fully Typed, Trusted Types Compliant.
@@ -43,6 +43,11 @@ const _html2canvas = typeof html2canvas !== 'undefined' ? html2canvas : null;
     // --- 0. PRESET DI ESCLUSIONE (SMART HARDENING) ---
     /** @type {Object<string, ExclusionPreset>} */
     const EXCLUSION_PRESETS = {
+        codeCornUI: {
+            selector: '[id^="__cc_"]',
+            stopUI: false,
+            stopTools: true, // Rende la UI immune a Thanos, Sniffer, Monitor e Inspector
+        },
         wpCustomizerControls: {
             selector: '#customize-controls, .wp-full-overlay-sidebar, #sub-accordion-panel-widgets',
             stopUI: true, // Impedisce il rendering della toolbar in questo specifico contenitore
@@ -74,9 +79,10 @@ const _html2canvas = typeof html2canvas !== 'undefined' ? html2canvas : null;
         return false;
     }
 
-    // --- 0. SETTINGS MANAGEMENT (CROSS-SITE) ---
+    // --- 0. SETTINGS MANAGEMENT (PER-SITE & CROSS-SITE) ---
     const STORAGE_KEY = '__cc_console_capture_logs_v4__';
-    const SETTINGS_KEY = '__cc_godmode_settings_global__';
+    // Isolamento configurazione per dominio
+    const SETTINGS_KEY = `__cc_godmode_settings_${hostname || 'global'}__`;
     const MAX_DEPTH = 15;
 
     /** @type {Object<string, any>} */
@@ -486,7 +492,11 @@ const _html2canvas = typeof html2canvas !== 'undefined' ? html2canvas : null;
         if (!_html2canvas) return showToast('❌ html2canvas non caricato', true);
         showToast('📸 Screenshot in corso...');
         try {
-            const canvas = await _html2canvas(document.body, { useCORS: true, logging: false });
+            const canvas = await _html2canvas(document.body, { 
+                useCORS: true, 
+                logging: false,
+                ignoreElements: (el) => el.id && typeof el.id === 'string' && el.id.startsWith('__cc_')
+            });
             downloadCanvas(canvas, 'screenshot');
         } catch (e) {
             showToast('❌ Errore Screenshot', true);
@@ -546,8 +556,10 @@ const _html2canvas = typeof html2canvas !== 'undefined' ? html2canvas : null;
         showToast(msg);
 
         overlay = document.createElement('div');
+        overlay.id = '__cc_overlay__';
         overlay.style.cssText = `position: fixed; pointer-events: none; z-index: 2147483645; transition: all 0.05s linear; background: ${bg}; outline: 2px solid ${border};`;
         tooltip = document.createElement('div');
+        tooltip.id = '__cc_tooltip__';
         tooltip.style.cssText = `position: fixed; background: #0f172a; color: #fff; padding: 6px 10px; border-radius: 4px; font-family: monospace; font-size: 12px; z-index: 2147483646; pointer-events: none; border: 1px solid #334155; display: none; white-space: pre-wrap;`;
 
         document.body.appendChild(overlay);
@@ -592,6 +604,7 @@ const _html2canvas = typeof html2canvas !== 'undefined' ? html2canvas : null;
      */
     function createTempOverlay(rect) {
         const o = document.createElement('div');
+        o.id = `__cc_temp_overlay_${Date.now()}__`;
         o.style.cssText = `position: fixed; pointer-events: none; z-index: 2147483644; background: rgba(250, 204, 21, 0.3); outline: 1px dashed #facc15; top: ${rect.top}px; left: ${rect.left}px; width: ${rect.width}px; height: ${rect.height}px;`;
         document.body.appendChild(o);
         tempOverlays.push(o);
@@ -618,12 +631,10 @@ const _html2canvas = typeof html2canvas !== 'undefined' ? html2canvas : null;
         /** @type {HTMLElement|null} */
         const target = /** @type {HTMLElement} */ (e.target);
 
-        // --- HARDENING CRITICO CONTRO I PRESET DI ESCLUSIONE (Evita crash o ispezioni sui pannelli WP Customizer e Topbar) ---
+        // --- HARDENING CRITICO CONTRO I PRESET DI ESCLUSIONE ---
         if (
             target &&
-            (target.closest('#__cc_sidebar__') ||
-                target.closest('#__cc_backdrop__') ||
-                target === document.body ||
+            (target === document.body ||
                 target === document.documentElement ||
                 matchesExclusionPreset(target, 'stopTools'))
         ) {
@@ -718,7 +729,12 @@ const _html2canvas = typeof html2canvas !== 'undefined' ? html2canvas : null;
 
                 try {
                     if (!_html2canvas) throw new Error('html2canvas err');
-                    const canvas = await _html2canvas(finalTarget, { useCORS: true, logging: false, backgroundColor: null });
+                    const canvas = await _html2canvas(finalTarget, { 
+                        useCORS: true, 
+                        logging: false, 
+                        backgroundColor: null,
+                        ignoreElements: (el) => el.id && typeof el.id === 'string' && el.id.startsWith('__cc_')
+                    });
                     downloadCanvas(canvas, selectedNodes.length > 0 ? 'area_multipla' : 'element');
                 } catch (err) {
                     showToast('❌ Errore cattura', true);
@@ -869,6 +885,7 @@ const _html2canvas = typeof html2canvas !== 'undefined' ? html2canvas : null;
         hudActive = !hudActive;
         if (hudActive) {
             hudEl = document.createElement('div');
+            hudEl.id = '__cc_hud__';
             hudEl.style.cssText = `position: fixed; top: 10px; right: 10px; background: rgba(15, 23, 42, 0.85); color: #38bdf8; padding: 12px 15px; border-radius: 8px; font-family: monospace; z-index: 2147483647; pointer-events: none; border: 1px solid #334155; font-size: 13px; line-height: 1.5; backdrop-filter: blur(4px); box-shadow: 0 4px 15px rgba(0,0,0,0.5);`;
             document.body.appendChild(hudEl);
             function updateHUD() {
@@ -918,57 +935,6 @@ const _html2canvas = typeof html2canvas !== 'undefined' ? html2canvas : null;
             showToast(`💣 Trappola innescata! Attesa stealth di ${(randomDelay / 1000).toFixed(1)}s prima dell'esplosione...`);
 
             setTimeout(() => {
-                /*
-                // =====================================================================
-                // 🚧 [REQUIRES SERVICE WORKER] - ADVANCED PUSH BUTTONS & LISTENERS 🚧
-                // I bottoni nativi ("actions") nelle notifiche web funzionano SOLO se
-                // lanciati da un Service Worker attivo sul dominio. Se hai o inietterai
-                // un SW, scommenta e usa questa logica per avere i pulsanti interattivi.
-                // =====================================================================
-
-                // 1. La Registrazione e l'invio della notifica con i tasti
-                // navigator.serviceWorker.ready.then(registration => {
-                //     registration.showNotification("⚠️ SISTEMA CRITICO", {
-                //         body: "Azione richiesta per continuare la sessione.",
-                //         icon: "https://cdn-icons-png.flaticon.com/512/564/564619.png",
-                //         requireInteraction: true,
-                //         actions: [
-                //             { action: 'resolve', title: '✅ RISOLVI ORA' },
-                //             { action: 'ignore', title: '❌ IGNORA' }
-                //         ]
-                //     });
-                // });
-
-                // 2. Il Listener da iniettare nel file del Service Worker (es: sw.js)
-                // self.addEventListener('notificationclick', function(event) {
-                //     event.notification.close();
-                //     if (event.action === 'resolve') {
-                //         // Riporta in focus la finestra
-                //         event.waitUntil(
-                //             clients.matchAll({ type: "window" }).then(clientList => {
-                //                 for (let i = 0; i < clientList.length; i++) {
-                //                     let client = clientList[i];
-                //                     if (client.url === '/' && 'focus' in client) return client.focus();
-                //                 }
-                //                 if (clients.openWindow) return clients.openWindow('/');
-                //             })
-                //         );
-                //         // Comunica alla pagina web di far partire il resto della logica
-                //         // self.clients.matchAll().then(clients => {
-                //         //     clients.forEach(client => client.postMessage({ type: 'TRAP_RESOLVE' }));
-                //         // });
-                //     }
-                // });
-
-                // 3. Il Listener sulla pagina per ricevere il segnale dal SW e sparare audio/modal
-                // navigator.serviceWorker.addEventListener('message', event => {
-                //     if (event.data && event.data.type === 'TRAP_RESOLVE') {
-                //          // ... Qui parte il Modal DOM e l'Audio ...
-                //     }
-                // });
-                // =====================================================================
-                */
-
                 // --- FALLBACK ATTIVO: Click sull'intero corpo della notifica ---
                 const n = new Notification('⚠️ SISTEMA CRITICO', {
                     body: 'Azione richiesta per continuare la sessione. Clicca per risolvere.',
@@ -1212,6 +1178,7 @@ const _html2canvas = typeof html2canvas !== 'undefined' ? html2canvas : null;
             if (e.target === bd) closeModals();
         };
         const modal = document.createElement('div');
+        modal.id = `__cc_modal_${Date.now()}__`;
         modal.style.cssText = `background: #0f172a; color: #f8fafc; padding: 25px; border-radius: 12px; box-shadow: 0 10px 40px rgba(0,0,0,0.8); font-family: system-ui, sans-serif; min-width: ${customWidth}; max-width: 90vw; max-height: 90vh; overflow-y: auto; border: 1px solid #334155; cursor: default; display: flex; flex-direction: column; gap: 15px;`;
 
         // Header
@@ -1687,7 +1654,7 @@ const _html2canvas = typeof html2canvas !== 'undefined' ? html2canvas : null;
         thanos: toggleThanos,
         xray: toggleXRay,
         dump: exportStateDump,
-        version: '4.17.5',
+        version: '4.17.6',
         settings: userSettings,
     };
 
@@ -1803,6 +1770,9 @@ const _html2canvas = typeof html2canvas !== 'undefined' ? html2canvas : null;
                 #__cc_sidebar__[data-pos="left"]:hover .__cc-btn .__cc-btn-text,
                 #__cc_sidebar__[data-pos="right"]:hover .__cc-btn .__cc-btn-text { max-width: 200px; opacity: 1; margin-left: 8px; }
             }
+            @media print {
+                #__cc_sidebar__, [id^="__cc_"] { display: none !important; }
+            }
         `;
         document.head.appendChild(styleNode);
 
@@ -1867,5 +1837,5 @@ const _html2canvas = typeof html2canvas !== 'undefined' ? html2canvas : null;
         startAutoHide();
     });
 
-    ccLog('God Mode v4.17.5 Inizializzato! 🚀 (Trusted Types Compliant)');
+    ccLog('God Mode v4.17.6 Inizializzato! 🚀 (Trusted Types Compliant)');
 })();
